@@ -76,6 +76,21 @@ export interface Connection {
   lastUsedAt: string | null
 }
 
+
+/**
+ * A GitHub App installation.
+ *
+ * The app is installed on an organisation or on a person's account, and the
+ * installation is what says which repositories its token can read. A person
+ * who has it in several places chooses which one the platform reads.
+ */
+export interface GitHubInstallation {
+  id: number
+  account: string
+  target: string
+  selected: boolean
+}
+
 export interface Repository {
   id: string
   organizationId: string

@@ -17,7 +17,7 @@ import { Play, Plus, Search, Trash2 } from 'lucide-react'
 import { Empty, TimeAgo, useAsync } from '../components'
 import { rememberReturnTo, repositoriesPath } from '../journey'
 import type { Api } from '../api'
-import type { Connection, ConnectionProvider, Provider, Repository } from '../types'
+import type { Connection, ConnectionProvider, GitHubInstallation, Provider, Repository } from '../types'
 
 /** A repository, as the forge's API returned it. */
 interface RemoteRepository {
@@ -52,6 +52,7 @@ export function Repositories({
   const [connectionId, setConnectionId] = useState('')
   const [search, setSearch] = useState('')
   const [watching, setWatching] = useState<string | null>(null)
+  const [switching, setSwitching] = useState<number | null>(null)
   // The long way, folded away until it is asked for.
   const [manual, setManual] = useState(false)
   // The operator comes back from a forge's authorisation to the page the
@@ -89,6 +90,22 @@ export function Repositories({
     if (connectionId && active.some((connection) => connection.id === connectionId)) return
     setConnectionId(active.length === 1 ? active[0].id : '')
   }, [active, connectionId])
+
+  // The installations of a GitHub connection. The app can be installed in
+  // several places, and the installation is what says which repositories
+  // the token can read, so it is the operator's choice.
+  //
+  // The dependencies are primitives: an array that is rebuilt on every render
+  // would re-run the effect on every render, and the fetch would never settle.
+  const selectedProvider =
+    active.find((connection) => connection.id === connectionId)?.provider ?? ''
+  const installations = useAsync(
+    () =>
+      connectionId && selectedProvider === 'github'
+        ? api.listInstallations(connectionId)
+        : Promise.resolve({ installations: [] as GitHubInstallation[] }),
+    [api, connectionId, selectedProvider],
+  )
 
   const remote = useAsync(
     () =>
@@ -133,6 +150,29 @@ export function Repositories({
       }
     },
     [api, connectionId, repositories, onChanged],
+  )
+
+  /**
+   * Choose the installation a GitHub connection reads.
+   *
+   * The repositories that follow are the installation's, so this is the
+   * switch that decides what the operator watches.
+   */
+  const chooseInstallation = useCallback(
+    async (installation: GitHubInstallation) => {
+      setSwitching(installation.id)
+      setError(null)
+      try {
+        await api.selectInstallation(connectionId, installation.id)
+        installations.reload()
+        remote.reload()
+      } catch (cause) {
+        setError(cause instanceof Error ? cause.message : String(cause))
+      } finally {
+        setSwitching(null)
+      }
+    },
+    [api, connectionId, installations, remote],
   )
 
   /**
@@ -211,10 +251,13 @@ export function Repositories({
     [api, repositories, onChanged],
   )
 
-  const preRegistered = (providers.data?.providers ?? []).filter((entry) => entry.preRegistered)
-  const needsRegistration = (providers.data?.providers ?? []).filter(
-    (entry) => !entry.preRegistered,
-  )
+  // GitHub leads: the repositories most organisations watch are on GitHub,
+  // and the app is the grant that reads them.
+  const byPreference = (left: ConnectionProvider, right: ConnectionProvider) =>
+    left.id === 'github' ? -1 : right.id === 'github' ? 1 : 0
+  const allProviders = [...(providers.data?.providers ?? [])].sort(byPreference)
+  const preRegistered = allProviders.filter((entry) => entry.preRegistered)
+  const needsRegistration = allProviders.filter((entry) => !entry.preRegistered)
 
   return (
     <>
@@ -243,15 +286,20 @@ export function Repositories({
                   Connect {entry.title}
                 </button>
               ))}
-              {needsRegistration.length > 0 ? (
-                <button className="button" onClick={() => onNavigate('/connections')}>
-                  Connect {needsRegistration.map((entry) => entry.title).join(' or ')}
+              {needsRegistration.map((entry) => (
+                <button
+                  key={entry.id}
+                  className={entry.id === 'github' ? 'button primary' : 'button'}
+                  onClick={() => onNavigate('/connections')}
+                >
+                  <Plus size={14} />
+                  Connect {entry.title}
                 </button>
-              ) : null}
+              ))}
             </div>
             <p className="muted small">
               {needsRegistration.length > 0
-                ? `${needsRegistration.map((entry) => entry.title).join(' and ')} need an application registered with the forge first; the connections page says what to register.`
+                ? `${needsRegistration.map((entry) => entry.title).join(' and ')} need an application registered with them first; the connections page says what to register.`
                 : 'The platform has already registered an application with the forge, so there is nothing to copy.'}
             </p>
           </div>
@@ -279,6 +327,29 @@ export function Repositories({
                   ))}
                 </select>
               </label>
+            ) : null}
+
+            {installations.data && installations.data.installations.length > 0 ? (
+              <div className="installations">
+                <span className="muted small">
+                  The app is installed in {installations.data.installations.length} place
+                  {installations.data.installations.length === 1 ? '' : 's'}. The
+                  installation says which repositories it can read.
+                </span>
+                <div className="filters">
+                  {installations.data.installations.map((installation) => (
+                    <button
+                      key={installation.id}
+                      className={installation.selected ? 'button primary' : 'button'}
+                      disabled={switching !== null}
+                      onClick={() => void chooseInstallation(installation)}
+                    >
+                      {installation.account || `installation ${installation.id}`}
+                      {installation.target ? ` · ${installation.target}` : ''}
+                    </button>
+                  ))}
+                </div>
+              </div>
             ) : null}
 
             {remote.loading ? (

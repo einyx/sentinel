@@ -516,6 +516,11 @@ p {
   gap: 12px;
 }
 
+.installations {
+  display: grid;
+  gap: 6px;
+}
+
 .repo-list {
   background: var(--bg-panel);
   border: 1px solid var(--border);

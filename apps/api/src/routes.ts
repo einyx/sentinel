@@ -345,6 +345,99 @@ export async function registerRoutes(
     return { connection: completed }
   })
 
+  /**
+   * The installations the person who authorised the app can see.
+   *
+   * A GitHub App can be installed on several organisations, and on a few
+   * repositories in each. The installation is what says which repositories
+   * the token can read, so it is the operator's choice — not one the
+   * platform makes for them by taking the first.
+   */
+  app.get('/connections/:id/installations', async (request, reply) => {
+    const actor = actorOf(request)
+    const { id } = request.params as { id: string }
+    const connection = await store.getConnection(id)
+    if (!connection || connection.organizationId !== actor.organizationId) {
+      return reply.code(404).send({ error: 'no such connection' })
+    }
+    if (connection.provider !== 'github') {
+      return reply.code(400).send({ error: 'only a GitHub connection has installations' })
+    }
+
+    const stored = Array.isArray(connection.metadata.installations)
+      ? (connection.metadata.installations as Array<Record<string, unknown>>)
+      : []
+    let installations = stored
+
+    // The live list is what the person can see now; the stored one is what
+    // the last authorisation saw, and is enough to choose from.
+    const secrets = await store.getConnectionSecrets(id)
+    if (secrets?.accessToken) {
+      try {
+        const live = await listInstallations({
+          baseUrl: connection.baseUrl,
+          accessToken: decrypt(secrets.accessToken, settings.encryptionKey),
+        })
+        if (live.length) installations = live
+      } catch {
+        // The stored list stands.
+      }
+    }
+
+    return {
+      installations: installations.map((entry) => ({
+        id: Number(entry.id),
+        account: String(entry.account ?? ''),
+        target: String(entry.target ?? ''),
+        selected: Number(entry.id) === Number(connection.metadata.installationId),
+      })),
+    }
+  })
+
+  /**
+   * Choose the installation the connection reads.
+   *
+   * The repositories that follow are the installation's, so this is the
+   * switch that decides what the operator watches.
+   */
+  app.put('/connections/:id/installation', async (request, reply) => {
+    const actor = actorOf(request)
+    if (!requireRole(request, reply, 'member')) return
+
+    const { id } = request.params as { id: string }
+    const body = bodyOf(request)
+    const installationId = Number(body.installationId)
+    if (!Number.isFinite(installationId)) {
+      return reply.code(400).send({ error: 'installationId is required' })
+    }
+
+    const connection = await store.getConnection(id)
+    if (!connection || connection.organizationId !== actor.organizationId) {
+      return reply.code(404).send({ error: 'no such connection' })
+    }
+    if (connection.provider !== 'github') {
+      return reply.code(400).send({ error: 'only a GitHub connection has installations' })
+    }
+
+    const known = Array.isArray(connection.metadata.installations)
+      ? (connection.metadata.installations as Array<Record<string, unknown>>)
+      : []
+    const installation = known.find((entry) => Number(entry.id) === installationId)
+    if (!installation) {
+      return reply.code(400).send({ error: 'the connection cannot read that installation' })
+    }
+
+    const updated = await store.setConnectionMetadata(id, {
+      ...connection.metadata,
+      installationId: installation.id,
+      installationAccount: installation.account,
+    })
+    await store.audit(actor.organizationId, actor.subject, 'connection.installation', id, {
+      installationId,
+    })
+    return { connection: updated }
+  })
+
   /** The repositories the grant can read. */
   app.get('/connections/:id/repositories', async (request, reply) => {
     const actor = actorOf(request)

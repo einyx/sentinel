@@ -421,7 +421,29 @@ export const fixtures: Record<string, unknown> = {  '/me': {
         account: 'prysmsh',
         scopes: 'read:user',
         expiresAt: null,
-        metadata: { installationId: 42 },
+        metadata: {
+          installationId: 42,
+          installations: [
+            { id: 42, account: 'prysmsh', target: 'Organization' },
+            { id: 43, account: 'einyx', target: 'User' },
+          ],
+        },
+        status: 'active',
+        createdAt: new Date(Date.now() - 172800_000).toISOString(),
+        updatedAt: new Date(Date.now() - 3600_000).toISOString(),
+        lastUsedAt: null,
+      },
+      {
+        id: 'c3c3c3c3-c3c3-c3c3-c3c3-c3c3-c3c3-c3c3-c3c3-c3c3',
+        organizationId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+        provider: 'gitlab',
+        name: 'GitLab',
+        baseUrl: 'https://gitlab.com',
+        clientId: 'an-app',
+        account: null,
+        scopes: null,
+        expiresAt: null,
+        metadata: {},
         status: 'needs_attention',
         createdAt: new Date(Date.now() - 172800_000).toISOString(),
         updatedAt: new Date(Date.now() - 3600_000).toISOString(),
@@ -486,6 +508,15 @@ export function fixtureFor(path: string): unknown | null {
     const id = path.slice('/findings/'.length).split('?')[0]
     const finding = findings.find((entry) => entry.id === id)
     if (finding) return { finding, notes: notes.filter((note) => note.findingId === id) }
+  }
+
+  if (path.startsWith('/connections/') && path.endsWith('/installations')) {
+    return {
+      installations: [
+        { id: 42, account: 'prysmsh', target: 'Organization', selected: true },
+        { id: 43, account: 'einyx', target: 'User', selected: false },
+      ],
+    }
   }
 
   if (path.startsWith('/connections/') && path.endsWith('/repositories')) {

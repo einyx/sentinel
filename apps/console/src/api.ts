@@ -6,7 +6,7 @@
  * for anything.
  */
 
-import type { AuditEntry, Finding, FindingStatus, Honeytoken, Member, Repository, RepositoryIgnore, Scan, Summary, Insights, Validity, Webhook } from './types'
+import type { AuditEntry, Connection, Finding, FindingStatus, GitHubInstallation, Honeytoken, Member, Repository, RepositoryIgnore, Scan, Summary, Insights, Validity, Webhook } from './types'
 import { fixtureFor } from './fixtures'
 
 /** How an API call failed. */
@@ -83,6 +83,26 @@ export class Api {
   /** Change something else. */
   patch<T>(path: string, body?: unknown): Promise<T> {
     return this.request<T>('PATCH', path, body)
+  }
+
+  /** Replace something. */
+  put<T>(path: string, body?: unknown): Promise<T> {
+    return this.request<T>('PUT', path, body)
+  }
+
+  /**
+   * The installations a GitHub connection can read.
+   *
+   * A GitHub App can be installed in several places, and the installation
+   * is what says which repositories the token can read.
+   */
+  listInstallations(connectionId: string): Promise<{ installations: GitHubInstallation[] }> {
+    return this.get<{ installations: GitHubInstallation[] }>(`/connections/${connectionId}/installations`)
+  }
+
+  /** Choose the installation a GitHub connection reads. */
+  selectInstallation(connectionId: string, installationId: number): Promise<{ connection: Connection }> {
+    return this.put<{ connection: Connection }>(`/connections/${connectionId}/installation`, { installationId })
   }
 
   /** Remove something. */
