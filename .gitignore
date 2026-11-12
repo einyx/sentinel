@@ -1,0 +1,18 @@
+# The dependencies, the builds and the local state are not in the repository.
+node_modules/
+dist/
+*.tsbuildinfo
+coverage/
+
+# The local configuration and the secrets.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# The editor and the operating system's leftovers.
+.DS_Store
+*.swp
+.idea/
+.vscode/

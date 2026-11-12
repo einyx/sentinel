@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/svg+xml" href="/landing/favicon.svg" />
+    <title>Sentinel — secret scanning for your repositories</title>
+    <meta
+      name="description"
+      content="Sentinel finds the secrets your repositories are about to publish, and keeps track of them until they are revoked. Self-hosted, on your own infrastructure, with the keys you control."
+    />
+    <link rel="stylesheet" href="/landing/styles.css" />
+  </head>
+  <body>
+    <a class="skip" href="#main">Skip to content</a>
+
+    <nav class="nav" aria-label="Main navigation">
+      <div class="nav-inner">
+        <a class="brand" href="https://prysm.sh" aria-label="Prysm home">
+          <svg viewBox="0 0 32 32" fill="none" aria-hidden="true">
+            <path d="M16 3 5 7v9c0 7 4.6 11.2 11 13 6.4-1.8 11-6 11-13V7L16 3Z" />
+            <path d="M11 16.5 14.5 20 21 12.5" />
+          </svg>
+          <span>sentinel</span>
+        </a>
+        <div class="nav-links">
+          <a href="#what">What it does</a>
+          <a href="#how">How it works</a>
+          <a href="https://prysm.sh">All services</a>
+        </div>
+        <div class="nav-actions">
+          <a class="nav-cta" href="/console">Sign in <span aria-hidden="true">↗</span></a>
+        </div>
+      </div>
+    </nav>
+
+    <main id="main">
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="hero-copy">
+          <p class="eyebrow"><span class="status-dot" aria-hidden="true"></span> Secret scanning</p>
+          <h1 id="hero-title">Every secret,<br />accounted for.</h1>
+          <p class="lede">
+            Sentinel watches your repositories for credentials and tells you which of them still
+            work. It runs on your own infrastructure, against the forge you already use, with the
+            keys you already hold.
+          </p>
+          <div class="actions">
+            <a class="button" href="/console">Open the console <span aria-hidden="true">↗</span></a>
+            <a class="text-link" href="#how">How it works <span aria-hidden="true">→</span></a>
+          </div>
+        </div>
+
+        <div class="hero-panel" aria-label="A finding on the console">
+          <div class="panel-bar">
+            <span class="panel-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+            <span class="panel-title">findings</span>
+            <span class="panel-flag">live</span>
+          </div>
+          <div class="panel-body">
+            <div class="row">
+              <span class="badge open">open</span>
+              <span class="rule">connection-string-with-password</span>
+            </div>
+            <div class="row muted">
+              <span class="mono">deploy/postgres-ha/20-hba.sql:14</span>
+            </div>
+            <div class="row muted">
+              <span class="mono">postgres://zt:<span class="redacted">REDACTED</span>@postgres:5432/zt</span>
+            </div>
+            <div class="panel-foot">
+              <span class="mono">found 2h ago by Alessio</span>
+              <span class="pill">still valid</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="what" class="section" aria-labelledby="what-title">
+        <h2 id="what-title">What it does</h2>
+        <div class="grid">
+          <article class="card">
+            <h3>Finds them</h3>
+            <p>
+              Every commit, every branch, every file. The scanner walks the whole history of a
+              repository, not just the newest commit, so a secret that was pushed a year ago and
+              force-pushed away is still found.
+            </p>
+          </article>
+          <article class="card">
+            <h3>Knows whether they work</h3>
+            <p>
+              A revoked credential and a live one are different problems. Sentinel asks the
+              provider, so the console can tell you which secrets still work and which are noise.
+            </p>
+          </article>
+          <article class="card">
+            <h3>Keeps track of them</h3>
+            <p>
+              Every finding has a status, an owner and a note. A secret that was dealt with stays
+              dealt with, so it does not come back as new noise on every scan.
+            </p>
+          </article>
+          <article class="card">
+            <h3>Stops them at the door</h3>
+            <p>
+              A workflow scans every push before it is merged. The same scanner runs in the
+              pipeline, on your machine, and on the schedule — so a finding means the same thing
+              everywhere.
+            </p>
+          </article>
+          <article class="card">
+            <h3>Stays out of the way</h3>
+            <p>
+              Secrets are encrypted where they are stored, masked in every report, and never
+              handed out. The scanner's own history is the only place they are kept in the clear,
+              and it does not survive the scan.
+            </p>
+          </article>
+          <article class="card">
+            <h3>Is yours</h3>
+            <p>
+              It runs on your infrastructure and talks to your forge. There is nothing to sign up
+              for and nothing that leaves the building — not the repositories, not the secrets,
+              not the audit log.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section id="how" class="section" aria-labelledby="how-title">
+        <h2 id="how-title">How it works</h2>
+        <ol class="steps">
+          <li>
+            <span class="step-index mono">01</span>
+            <div>
+              <h3>Register a repository</h3>
+              <p>
+                Its clone URL and a read-only token. The token is encrypted before it is stored,
+                and it is handed to git in a way that keeps it out of every URL and every file.
+              </p>
+            </div>
+          </li>
+          <li>
+            <span class="step-index mono">02</span>
+            <div>
+              <h3>The worker scans it</h3>
+              <p>
+                It clones the repository, walks the history, and reports what it finds. Deleted
+                branches are kept, because that is where a secret stays hidden.
+              </p>
+            </div>
+          </li>
+          <li>
+            <span class="step-index mono">03</span>
+            <div>
+              <h3>You deal with what matters</h3>
+              <p>
+                The console shows the live ones first. Revoke the credential, mark the finding
+                resolved, and it will not be reported again.
+              </p>
+            </div>
+          </li>
+        </ol>
+      </section>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <span class="mono">sentinel</span>
+        <span class="muted">Self-hosted secret scanning.</span>
+        <a class="text-link" href="https://prysm.sh">All services</a>
+        <a class="text-link" href="/console">Sign in <span aria-hidden="true">↗</span></a>
+      </div>
+    </footer>
+  </body>
+</html>
